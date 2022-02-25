@@ -1,0 +1,15 @@
+{
+  "name": "cptdaks",
+  "version": "1.0.0",
+  "description": "Simple Web Server based on node.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node ./server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^10.0.0"
+  }
+}

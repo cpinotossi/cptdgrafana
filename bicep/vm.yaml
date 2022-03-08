@@ -1,0 +1,18 @@
+#cloud-config
+
+package_upgrade: true
+
+packages:
+  - nodejs
+  - npm
+  - apache2-utils
+  - git
+
+runcmd:
+  # Implement Node.js Server to run as service via pm2
+  - 'git clone https://raw.githubusercontent.com/cpinotossi/cptdgrafana.git'
+  - 'cd nodejs'
+  - 'npm install -g pm2'
+  - 'chmod +x server.js'
+  - 'pm2 start server.js'
+  

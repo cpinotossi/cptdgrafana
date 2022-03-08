@@ -1,0 +1,43 @@
+#cloud-config
+package_upgrade: true
+
+# bootcmd:
+#   # Because of https://github.com/MicrosoftDocs/azure-docs/issues/82500
+#   - systemctl mask waagent-apt.service
+
+packages:
+  - apache2-utils
+
+write_files:
+  - path: /etc/mosquitto/conf.d/myconfig.conf
+    content: |
+      persistence false
+      # mqtt
+      listener 1883 0.0.0.0
+      protocol mqtt
+      # websockets
+      listener 9001
+      protocol websockets
+      allow_anonymous true
+      password_file /etc/mosquitto/passwd
+      acl_file /etc/mosquitto/acl
+  - path: /etc/mosquitto/acl
+    content: |
+      # Allow anonymous access to the sys
+      topic read $SYS/#
+      # Allow anonymous to read weather
+      topic read cptdgrafana/#
+      # readwrite user
+      user chpinoto
+      topic cptdgrafana/#
+
+runcmd:
+  # Install Telegraf agent 
+  # - 'curl -s https://repos.influxdata.com/influxdb.key | sudo apt-key add -'
+  # - 'source /etc/lsb-release'
+  # - 'echo "deb https://repos.influxdata.com/${DISTRIB_ID,,} ${DISTRIB_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/influxdb.list'
+  # Install MQTT Broker Mosquitto
+  #- 'sudo apt update'
+  - 'sudo apt-get install mosquitto mosquitto-clients -y'
+  - mosquitto_passwd -b /etc/mosquitto/passwd chpinoto 'demo!pass123'
+  - 'systemctl start mosquitto.service'

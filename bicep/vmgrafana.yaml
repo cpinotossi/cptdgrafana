@@ -1,0 +1,56 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - software-properties-common
+  - git
+  - wget
+  - mysql-client-core-5.7
+  - nfs-common
+
+# https://grafana.com/docs/grafana/latest/administration/configuration/#database
+# write_files:
+#  - path: /etc/default/grafana-server
+#    content: |
+#     GF_DATABASE_TYPE="mysql"
+#     GF_DATABASE_HOST="cptdgrafana.mysql.database.azure.com:3306"
+#     GF_DATABASE_NAME="cptdgrafana"
+#     GF_DATABASE_USER="chpinoto@cptdgrafana"
+#     GF_DATABASE_PASSWORD="demo!pass123"
+#     GF_DATABASE_SSL_MODE="skip-verify"
+#     GF_DATABASE_CA_CERT_PATH="/etc/ssl/certs/ca-certificates.crt"
+#     GF_PATHS_CONFIG=/etc/grafana/grafana2.ini
+#     GF_PATHS_DATA=/var/lib/grafana
+#     GF_PATHS_HOME=/usr/share/grafana
+#     GF_PATHS_LOGS=/var/log/grafana
+#     GF_PATHS_PLUGINS=/var/lib/grafana/plugins
+#     GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+#    append: true
+#  - path: /etc/grafana/grafana.ini
+#    content: |
+#     [database]
+#     type = mysql
+#     host = cptdgrafana.mysql.database.azure.com:3306
+#     name = grafana
+#     user = chpinoto@cptdgrafana
+#     password = demo!pass123
+#     ssl_mode = skip-verify
+#     ca_cert_path = /etc/ssl/certs/ca-certificates.crts
+#    append: true
+
+runcmd:
+  # Based on https://grafana.com/docs/grafana/latest/installation/debian/
+  - 'wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -'
+  - 'echo "deb https://packages.grafana.com/enterprise/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list'
+  - 'apt-get update'
+  - 'apt-get install grafana-enterprise -y'
+  - 'systemctl daemon-reload'
+  - 'systemctl start grafana-server'
+  - 'systemctl enable grafana-server.service'
+  - 'grafana-cli plugins install marcusolsson-csv-datasource'
+  - 'systemctl restart grafana-server'
+  - 'curl -o /etc/grafana/grafana.ini https://raw.githubusercontent.com/cpinotossi/cptdgrafana/master/grafana/grafana.ini'
+  - 'systemctl restart grafana-server'

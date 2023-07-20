@@ -1,5 +1,16 @@
 # cptdgrafana
 
+## Grafana PaaS 
+
+~~~ bash
+az login
+prefix=cptdgrafana
+myip=$(curl ifconfig.io)
+myobjectid=$(az ad user list --query '[?displayName==`ga`].objectId' -o tsv)
+
+~~~
+
+
 ## Grafana on Azure VM
 
 Based on https://yallalabs.com/linux/how-to-install-grafana-using-mysql-mariadb-database-on-centos-7-rhel-7/ 
@@ -7,9 +18,34 @@ Based on https://yallalabs.com/linux/how-to-install-grafana-using-mysql-mariadb-
 ### Define env variables
 
 ~~~ bash
-prefix=cptdgrafana
+sudo hwclock -s
+sudo ntpdate time.windows.com
+az login
+prefix=cptdazgrafana
 myip=$(curl ifconfig.io)
 myobjectid=$(az ad user list --query '[?displayName==`ga`].objectId' -o tsv)
+location=eastus
+az group create -n $prefix -l $location
+az grafana create --name $prefix -g $prefix
+az grafana update --name $prefix -g $prefix --public-network-access disabled
+az network vnet create --name $prefix -g $prefix --subnet-name $prefix --location $location
+# create private endpoint
+grafid=$(az grafana show --name $prefix --query id -o tsv)
+az network private-endpoint create --resource-group $prefix --name $prefix --vnet-name $prefix --subnet $prefix --private-connection-resource-id $grafid --connection-name $prefix --location $location --group-id grafana
+az monitor log-analytics workspace create -g $prefix -n $prefix --retention-time 0
+az network private-endpoint-connection list -g $prefix --name $prefix --type Microsoft.Dashboard/grafana
+az network private-endpoint-connection show -g $prefix --name $prefix --type Microsoft.Dashboard/grafana --resource-name $prefix
+az network private-endpoint show -g $prefix --name $prefix --query customDnsConfigs
+az vm create -g $prefix -n $prefix --image Ubuntu2204 --admin-username chpinoto --vnet-name $prefix --subnet $prefix --private-ip-address 10.0.0.5 --public-ip-address ""
+# TBD create private DNS zone with zone .eus.grafana.azure.com
+# TBD create A records cptdazgrafana-ekd4gwh6f3crfmfn and sso pointing to 10.0.0.4
+az network private-dns zone show -g $prefix -n eus.privatelink.grafana.azure.com
+az network private-dns record-set a list -g $prefix -z eus.privatelink.grafana.azure.com --query "[].{aRecords:aRecords[0],fqdn:fqdn}" 
+
+curl -v https://sso.eus.grafana.azure.com/ --resolve sso.eus.grafana.azure.com:443:10.0.0.4 
+curl -v https://cptdazgrafana-ekd4gwh6f3crfmfn.eus.grafana.azure.com/ --resolve cptdazgrafana-ekd4gwh6f3crfmfn.eus.grafana.azure.com:443:10.0.0.4
+
+az group delete -n $prefix -y
 ~~~
 
 ### Create Azure resources
@@ -81,6 +117,7 @@ nano /etc/mosquitto/acl
 nano /etc/mosquitto/conf.d/myconfig.conf
 netstat -tulpn | grep 1883
 ~~~
+
 
 ## TODO
 - Finish Setup of MQTT Broker
@@ -230,3 +267,11 @@ git fetch --tags
 git clone -b <git-tagname> <repository-url> 
 ~~~
 
+
+[Windows only] Azure CLI is collecting feedback on using the Web Account Manager (WAM) broker for the login experience.
+
+You may opt-in to use WAM by running the following commands:
+
+az config set core.allow_broker=true
+az account clear
+az login
